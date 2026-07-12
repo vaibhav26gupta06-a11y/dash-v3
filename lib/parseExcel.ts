@@ -3,7 +3,7 @@ import * as XLSX from 'xlsx'
 function sheet(wb: XLSX.WorkBook, name: string): any[] {
   const ws = wb.Sheets[name]
   if (!ws) return []
-  return XLSX.utils.sheet_to_json(ws, { defval: null })
+  return XLSX.utils.sheet_to_json(ws, { defval: null, range: 2 })
 }
 
 function n(v: any): number {
