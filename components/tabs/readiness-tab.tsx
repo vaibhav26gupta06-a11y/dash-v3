@@ -6,21 +6,24 @@ import { BarChart, Bar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
 import { SectionHeading } from '@/components/section-heading'
 import { ChartCard } from '@/components/chart-card'
 import { CustomTooltip } from '@/components/custom-tooltip'
-import { readinessScores as readinessScoresData } from '@/lib/data'
+import { useData } from '@/context/DataContext'
+import { readinessScores as defaultReadinessScoresData } from '@/lib/data'
 
 interface ReadinessTabProps {
   dateRange: string
   productFilter: string
 }
 
-// Transform readinessScores from lib/data into the format needed for the chart
-const readinessScores = readinessScoresData.map((item: any) => ({
-  stage: item.stage,
-  score: item.readiness,
-  blocking: item.readiness >= 70 ? 'None' : item.readiness >= 40 ? 'Minor' : 'Major',
-  components: { digitisation: 75, consistency: 70, volume: 72, vendorMatch: 68, integration: 65 },
-  blockingDetail: item.item || '',
-}))
+// This function is defined here to be reusable
+function transformReadinessScores(readinessScoresData: any[]) {
+  return readinessScoresData.map((item: any) => ({
+    stage: item.stage,
+    score: item.readiness,
+    blocking: item.readiness >= 70 ? 'None' : item.readiness >= 40 ? 'Minor' : 'Major',
+    components: { digitisation: 75, consistency: 70, volume: 72, vendorMatch: 68, integration: 65 },
+    blockingDetail: item.item || '',
+  }))
+}
 
 
 
@@ -46,6 +49,9 @@ const retrainingSchedule = [
 ]
 
 export function ReadinessTab({ dateRange, productFilter }: ReadinessTabProps) {
+  const { data: excelData } = useData()
+  const readinessScoresData = excelData?.readinessScores ?? defaultReadinessScoresData
+  const readinessScores = useMemo(() => transformReadinessScores(readinessScoresData), [readinessScoresData])
   const [selectedStage, setSelectedStage] = useState<any>(null)
 
   const readyCount = readinessScores.filter((s: any) => s.score >= 70).length

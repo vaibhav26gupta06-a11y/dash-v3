@@ -6,13 +6,14 @@ import {
 } from 'recharts'
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { filterByDateRange } from '@/lib/filterData'
+import { useData } from '@/context/DataContext'
 import { KPICard } from '@/components/kpi-card'
 import { SectionHeading } from '@/components/section-heading'
 import { ChartCard } from '@/components/chart-card'
 import { CustomTooltip } from '@/components/custom-tooltip'
 import { StatusBadge } from '@/components/status-badge'
 import {
-  adoptionByProduct, adoptionByStage, overrideByStage, overrideHeatmap, featureAdoption, adoptionTrend,
+  adoptionByProduct as defaultAdoptionByProduct, adoptionByStage as defaultAdoptionByStage, overrideByStage as defaultOverrideByStage, overrideHeatmap as defaultOverrideHeatmap, featureAdoption as defaultFeatureAdoption, adoptionTrend as defaultAdoptionTrend,
 } from '@/lib/data'
 
 interface AdoptionTabProps {
@@ -21,7 +22,15 @@ interface AdoptionTabProps {
 }
 
 export function AdoptionTab({ dateRange, productFilter }: AdoptionTabProps) {
-  const filteredTrend = useMemo(() => filterByDateRange(adoptionTrend, dateRange), [dateRange])
+  const { data: excelData } = useData()
+  const adoptionByProduct = excelData?.adoptionByProduct ?? defaultAdoptionByProduct
+  const adoptionByStage = excelData?.adoptionByStage ?? defaultAdoptionByStage
+  const overrideByStage = excelData?.overrideByStage ?? defaultOverrideByStage
+  const overrideHeatmap = excelData?.overrideHeatmap ?? defaultOverrideHeatmap
+  const featureAdoption = excelData?.featureAdoption ?? defaultFeatureAdoption
+  const adoptionTrend = excelData?.adoptionTrend ?? defaultAdoptionTrend
+  
+  const filteredTrend = useMemo(() => filterByDateRange(adoptionTrend, dateRange), [dateRange, adoptionTrend])
   const [hoveredCell, setHoveredCell] = useState<string | null>(null)
 
   const getOverrideReasons: Record<string, string> = {

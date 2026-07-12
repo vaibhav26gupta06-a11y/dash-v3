@@ -4,11 +4,12 @@ import { useState, useMemo } from 'react'
 import { X } from 'lucide-react'
 import { AreaChart, Area, BarChart, Bar, ComposedChart, Line, YAxis, XAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ReferenceArea, ResponsiveContainer, Cell } from 'recharts'
 import { filterByDateRange } from '@/lib/filterData'
+import { useData } from '@/context/DataContext'
 import { KPICard } from '@/components/kpi-card'
 import { SectionHeading } from '@/components/section-heading'
 import { ChartCard } from '@/components/chart-card'
 import { CustomTooltip } from '@/components/custom-tooltip'
-import { costKPIs, costByProduct, savingsTrend, vendors } from '@/lib/data'
+import { costKPIs as defaultCostKPIs, costByProduct as defaultCostByProduct, savingsTrend as defaultSavingsTrend, vendors as defaultVendors } from '@/lib/data'
 
 interface CostTabProps {
   dateRange: string
@@ -16,7 +17,13 @@ interface CostTabProps {
 }
 
 export function CostTab({ dateRange, productFilter }: CostTabProps) {
-  const filteredSavingsTrend = useMemo(() => filterByDateRange(savingsTrend, dateRange), [dateRange])
+  const { data: excelData } = useData()
+  const costKPIs = excelData?.costKPIs ?? defaultCostKPIs
+  const costByProduct = excelData?.costByProduct ?? defaultCostByProduct
+  const savingsTrend = excelData?.savingsTrend ?? defaultSavingsTrend
+  const vendors = excelData?.vendors ?? defaultVendors
+  
+  const filteredSavingsTrend = useMemo(() => filterByDateRange(savingsTrend, dateRange), [dateRange, savingsTrend])
   const [selectedProduct, setSelectedProduct] = useState<any>(null)
 
   const CostDetailDrawer = ({ product, onClose }: { product: any; onClose: () => void }) => {

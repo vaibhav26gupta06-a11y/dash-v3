@@ -1,8 +1,9 @@
 'use client'
 
-import { Bell, Download } from 'lucide-react'
-import { useState } from 'react'
+import { Bell, Download, Upload, RefreshCw, CheckCircle } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useData } from '@/context/DataContext'
 import {
   Select,
   SelectContent,
@@ -19,7 +20,6 @@ import {
 } from '@/components/ui/popover'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/toast-provider'
-import { notifications } from '@/lib/data'
 
 interface TopBarProps {
   activeTab: string
@@ -50,6 +50,19 @@ export function TopBar({
   isCollapsed,
 }: TopBarProps) {
   const { toast } = useToast()
+  const {
+    loadFromExcel, resetToDefault, isExcelLoaded,
+    isLoading: excelLoading, error: excelError,
+    lastUpdated, data: excelData,
+  } = useData()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const notifications = excelData?.notifications ?? []
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) loadFromExcel(file)
+    e.target.value = ''
+  }
 
   const handleExport = () => {
     toast({
@@ -197,6 +210,62 @@ export function TopBar({
             <Download size={16} className="mr-2" />
             Export Tab
           </Button>
+
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+
+          {/* Divider */}
+          <div className="w-px h-6 bg-[color:var(--color-border)]" />
+
+          {/* Excel Upload Button */}
+          {excelLoading ? (
+            <div className="flex items-center gap-2 text-xs text-[color:var(--color-text-muted)]">
+              <RefreshCw size={14} className="animate-spin" />
+              Parsing Excel...
+            </div>
+          ) : isExcelLoaded ? (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 text-xs text-[color:var(--color-green)] hover:bg-[color:var(--color-green-bg)] rounded px-3 py-1.5 transition-colors"
+              title={lastUpdated}
+            >
+              <CheckCircle size={14} />
+              Excel Loaded
+            </button>
+          ) : (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-2 text-xs text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-grey-bg)] rounded px-3 py-1.5 transition-colors"
+            >
+              <Upload size={14} />
+              Upload Excel
+            </button>
+          )}
+
+          {/* Reset Button (only show if Excel is loaded) */}
+          {isExcelLoaded && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={resetToDefault}
+              className="text-xs border-[color:var(--color-border)] text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-grey-bg)]"
+            >
+              Reset Data
+            </Button>
+          )}
+
+          {/* Error display */}
+          {excelError && (
+            <div className="text-xs text-[color:var(--color-red)] bg-[color:var(--color-red-bg)] px-2 py-1 rounded">
+              {excelError}
+            </div>
+          )}
         </div>
       </div>
     </header>

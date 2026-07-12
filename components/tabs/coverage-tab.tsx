@@ -2,11 +2,12 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { useData } from '@/context/DataContext'
 import {
-  LOAN_PRODUCTS,
-  DEPLOYMENT_MATRIX,
-  SUPPORT_FUNCTIONS_STATUS,
-  STAGES,
+  LOAN_PRODUCTS as defaultLoanProducts,
+  DEPLOYMENT_MATRIX as defaultDeploymentMatrix,
+  SUPPORT_FUNCTIONS_STATUS as defaultSupportFunctionsStatus,
+  STAGES as defaultStages,
   DeploymentStatus,
   Stage,
 } from '@/lib/data'
@@ -43,6 +44,11 @@ interface Card {
 }
 
 export function CoverageTab({ dateRange, productFilter }: CoverageTabProps) {
+  const { data: excelData } = useData()
+  const LOAN_PRODUCTS = excelData?.LOAN_PRODUCTS ?? defaultLoanProducts
+  const DEPLOYMENT_MATRIX = excelData?.DEPLOYMENT_MATRIX ?? defaultDeploymentMatrix
+  const SUPPORT_FUNCTIONS_STATUS = excelData?.SUPPORT_FUNCTIONS_STATUS ?? defaultSupportFunctionsStatus
+  const STAGES = excelData?.STAGES ?? defaultStages
   const router = useRouter()
   const [selectedFilter, setSelectedFilter] = useState<DeploymentStatus | 'All'>('All')
 

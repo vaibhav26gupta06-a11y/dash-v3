@@ -4,12 +4,13 @@ import { useState, useMemo } from 'react'
 import { X, CheckCircle2, AlertCircle, TrendingDown } from 'lucide-react'
 import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
 import { filterByDateRange } from '@/lib/filterData'
+import { useData } from '@/context/DataContext'
 import { KPICard } from '@/components/kpi-card'
 import { SectionHeading } from '@/components/section-heading'
 import { ChartCard } from '@/components/chart-card'
 import { CustomTooltip } from '@/components/custom-tooltip'
 import { StatusBadge } from '@/components/status-badge'
-import { vendors, incidents, modelDrift, inputQualityByProduct, qualityFailureReasons } from '@/lib/data'
+import { vendors as defaultVendors, incidents as defaultIncidents, modelDrift as defaultModelDrift, inputQualityByProduct as defaultInputQualityByProduct, qualityFailureReasons as defaultQualityFailureReasons } from '@/lib/data'
 
 interface VendorTabProps {
   dateRange: string
@@ -17,8 +18,15 @@ interface VendorTabProps {
 }
 
 export function VendorTab({ dateRange, productFilter }: VendorTabProps) {
-  const filteredModelDrift = useMemo(() => filterByDateRange(modelDrift, dateRange), [dateRange])
-  const filteredIncidents = useMemo(() => filterByDateRange(incidents, dateRange), [dateRange])
+  const { data: excelData } = useData()
+  const vendors = excelData?.vendors ?? defaultVendors
+  const incidents = excelData?.incidents ?? defaultIncidents
+  const modelDrift = excelData?.modelDrift ?? defaultModelDrift
+  const inputQualityByProduct = excelData?.inputQualityByProduct ?? defaultInputQualityByProduct
+  const qualityFailureReasons = excelData?.qualityFailureReasons ?? defaultQualityFailureReasons
+  
+  const filteredModelDrift = useMemo(() => filterByDateRange(modelDrift, dateRange), [dateRange, modelDrift])
+  const filteredIncidents = useMemo(() => filterByDateRange(incidents, dateRange), [dateRange, incidents])
   const [selectedVendor, setSelectedVendor] = useState<any>(null)
 
   const slaComplianceKPIs = {

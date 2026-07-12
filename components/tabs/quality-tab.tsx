@@ -5,6 +5,7 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, ReferenceLine, ReferenceArea,
 } from 'recharts'
 import { filterByDateRange, getDocTypesForProduct } from '@/lib/filterData'
+import { useData } from '@/context/DataContext'
 import { KPICard } from '@/components/kpi-card'
 import { SectionHeading } from '@/components/section-heading'
 import { ChartCard } from '@/components/chart-card'
@@ -12,7 +13,7 @@ import { CustomTooltip } from '@/components/custom-tooltip'
 import { StatusBadge } from '@/components/status-badge'
 import { X, Info } from 'lucide-react'
 import {
-  qualityKPIs, accuracyTrend, ftrByStage, docTypeAccuracy, fprFnrTrend, reworkByProduct,
+  qualityKPIs as defaultQualityKPIs, accuracyTrend as defaultAccuracyTrend, ftrByStage as defaultFtrByStage, docTypeAccuracy as defaultDocTypeAccuracy, fprFnrTrend as defaultFprFnrTrend, reworkByProduct as defaultReworkByProduct,
 } from '@/lib/data'
 
 interface QualityTabProps {
@@ -21,10 +22,18 @@ interface QualityTabProps {
 }
 
 export function QualityTab({ dateRange, productFilter }: QualityTabProps) {
-  const filteredAccuracyTrend = useMemo(() => filterByDateRange(accuracyTrend, dateRange), [dateRange])
-  const filteredFprFnr = useMemo(() => filterByDateRange(fprFnrTrend, dateRange), [dateRange])
-  const allowedDocTypes = useMemo(() => productFilter === 'All Products' ? docTypeAccuracy.map(d => d.doc) : getDocTypesForProduct(productFilter), [productFilter])
-  const filteredDocTypes = useMemo(() => productFilter === 'All Products' ? docTypeAccuracy : docTypeAccuracy.filter(d => allowedDocTypes.includes(d.doc)), [productFilter, allowedDocTypes])
+  const { data: excelData } = useData()
+  const qualityKPIs = excelData?.qualityKPIs ?? defaultQualityKPIs
+  const accuracyTrend = excelData?.accuracyTrend ?? defaultAccuracyTrend
+  const ftrByStage = excelData?.ftrByStage ?? defaultFtrByStage
+  const docTypeAccuracy = excelData?.docTypeAccuracy ?? defaultDocTypeAccuracy
+  const fprFnrTrend = excelData?.fprFnrTrend ?? defaultFprFnrTrend
+  const reworkByProduct = excelData?.reworkByProduct ?? defaultReworkByProduct
+  
+  const filteredAccuracyTrend = useMemo(() => filterByDateRange(accuracyTrend, dateRange), [dateRange, accuracyTrend])
+  const filteredFprFnr = useMemo(() => filterByDateRange(fprFnrTrend, dateRange), [dateRange, fprFnrTrend])
+  const allowedDocTypes = useMemo(() => productFilter === 'All Products' ? docTypeAccuracy.map(d => d.doc) : getDocTypesForProduct(productFilter), [productFilter, docTypeAccuracy])
+  const filteredDocTypes = useMemo(() => productFilter === 'All Products' ? docTypeAccuracy : docTypeAccuracy.filter(d => allowedDocTypes.includes(d.doc)), [productFilter, allowedDocTypes, docTypeAccuracy])
 
   const [selectedDocType, setSelectedDocType] = useState<any>(null)
 

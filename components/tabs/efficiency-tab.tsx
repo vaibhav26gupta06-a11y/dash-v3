@@ -4,11 +4,12 @@ import { useState, useMemo } from 'react'
 import { X } from 'lucide-react'
 import { AreaChart, Area, BarChart, Bar, ComposedChart, Line, YAxis, XAxis, CartesianGrid, Tooltip, Legend, ReferenceLine, ResponsiveContainer } from 'recharts'
 import { filterByDateRange } from '@/lib/filterData'
+import { useData } from '@/context/DataContext'
 import { KPICard } from '@/components/kpi-card'
 import { SectionHeading } from '@/components/section-heading'
 import { ChartCard } from '@/components/chart-card'
 import { CustomTooltip } from '@/components/custom-tooltip'
-import { efficiencyKPIs, ahtComparison, tatTrend, stpHandoffTrend, ftrByStage } from '@/lib/data'
+import { efficiencyKPIs as defaultEfficiencyKPIs, ahtComparison as defaultAHTComparison, tatTrend as defaultTATTrend, stpHandoffTrend as defaultSTPHandoffTrend, ftrByStage as defaultFtrByStage } from '@/lib/data'
 
 interface EfficiencyTabProps {
   dateRange: string
@@ -16,8 +17,15 @@ interface EfficiencyTabProps {
 }
 
 export function EfficiencyTab({ dateRange, productFilter }: EfficiencyTabProps) {
-  const filteredTAT = useMemo(() => filterByDateRange(tatTrend, dateRange), [dateRange])
-  const filteredSTPHandoff = useMemo(() => filterByDateRange(stpHandoffTrend, dateRange), [dateRange])
+  const { data: excelData } = useData()
+  const efficiencyKPIs = excelData?.efficiencyKPIs ?? defaultEfficiencyKPIs
+  const ahtComparison = excelData?.ahtComparison ?? defaultAHTComparison
+  const tatTrend = excelData?.tatTrend ?? defaultTATTrend
+  const stpHandoffTrend = excelData?.stpHandoffTrend ?? defaultSTPHandoffTrend
+  const ftrByStage = excelData?.ftrByStage ?? defaultFtrByStage
+  
+  const filteredTAT = useMemo(() => filterByDateRange(tatTrend, dateRange), [dateRange, tatTrend])
+  const filteredSTPHandoff = useMemo(() => filterByDateRange(stpHandoffTrend, dateRange), [dateRange, stpHandoffTrend])
   const [selectedStage, setSelectedStage] = useState<any>(null)
 
   const AHTDetailDrawer = ({ stage, onClose }: { stage: any; onClose: () => void }) => {

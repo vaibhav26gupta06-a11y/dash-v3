@@ -16,13 +16,8 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { filterByDateRange } from '@/lib/filterData'
-import {
-  overviewKPIs,
-  overviewTrend,
-  stageAutomationCoverage,
-  milestones,
-  topSignals,
-} from '@/lib/data'
+import { useData } from '@/context/DataContext'
+import { overviewKPIs as defaultOverviewKPIs, overviewTrend as defaultOverviewTrend, stageAutomationCoverage as defaultStageAutomationCoverage, milestones as defaultMilestones, topSignals as defaultTopSignals } from '@/lib/data'
 import { KPICard } from '@/components/kpi-card'
 import { SectionHeading } from '@/components/section-heading'
 import { ChartCard } from '@/components/chart-card'
@@ -35,7 +30,14 @@ interface OverviewTabProps {
 }
 
 export function OverviewTab({ dateRange, productFilter }: OverviewTabProps) {
-  const filteredTrend = useMemo(() => filterByDateRange(overviewTrend, dateRange), [dateRange])
+  const { data: excelData } = useData()
+  const overviewKPIs = excelData?.overviewKPIs ?? defaultOverviewKPIs
+  const overviewTrend = excelData?.overviewTrend ?? defaultOverviewTrend
+  const stageAutomationCoverage = excelData?.stageAutomationCoverage ?? defaultStageAutomationCoverage
+  const milestones = excelData?.milestones ?? defaultMilestones
+  const topSignals = excelData?.topSignals ?? defaultTopSignals
+  
+  const filteredTrend = useMemo(() => filterByDateRange(overviewTrend, dateRange), [dateRange, overviewTrend])
 
   const kpiConfigs = [
     {
