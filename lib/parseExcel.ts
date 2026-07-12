@@ -53,28 +53,31 @@ export async function parseExcelFile(file: File) {
 
   // ── 2_OverviewKPIs ──────────────────────────────────────
   const kpiRows = sheet(wb, '2_OverviewKPIs')
-  const kMap: Record<string, any> = {}
-  kpiRows.forEach((r: any) => {
-    kMap[s(r['KPI Key'])] = {
-      value: isNaN(parseFloat(r['Current Value']))
-        ? s(r['Current Value']) : n(r['Current Value']),
-      target: n(r['Target']),
-      delta: n(r['Delta']),
-      unit: s(r['Unit']),
-      status: s(r['Status']) as any,
-    }
-  })
 
   // Import hardcoded defaults for anything not in Excel sheets
   const defaults = await import('./data')
 
+  function parseKPIRow(rows: any[], key: string, fallback: any) {
+    const row = rows.find((r: any) => s(r['KPI Key']) === key)
+    if (!row) return fallback
+    const rawValue = row['Current Value']
+    const parsed = parseFloat(String(rawValue))
+    return {
+      value: isNaN(parsed) ? s(rawValue) : parsed,
+      target: n(row['Target']),
+      delta: n(row['Delta']),
+      unit: s(row['Unit']),
+      status: s(row['Status']) as any,
+    }
+  }
+
   const overviewKPIs = {
-    automationCoverage: kMap['automationCoverage'] ?? defaults.overviewKPIs.automationCoverage,
-    documentAccuracy:   kMap['documentAccuracy']   ?? defaults.overviewKPIs.documentAccuracy,
-    ftrRate:            kMap['ftrRate']             ?? defaults.overviewKPIs.ftrRate,
-    stpRate:            kMap['stpRate']             ?? defaults.overviewKPIs.stpRate,
-    userAdoption:       kMap['userAdoption']        ?? defaults.overviewKPIs.userAdoption,
-    tatSaved:           kMap['tatSaved']            ?? defaults.overviewKPIs.tatSaved,
+    automationCoverage: parseKPIRow(kpiRows, 'automationCoverage', defaults.overviewKPIs.automationCoverage),
+    documentAccuracy:   parseKPIRow(kpiRows, 'documentAccuracy',   defaults.overviewKPIs.documentAccuracy),
+    ftrRate:            parseKPIRow(kpiRows, 'ftrRate',            defaults.overviewKPIs.ftrRate),
+    stpRate:            parseKPIRow(kpiRows, 'stpRate',            defaults.overviewKPIs.stpRate),
+    userAdoption:       parseKPIRow(kpiRows, 'userAdoption',       defaults.overviewKPIs.userAdoption),
+    tatSaved:           parseKPIRow(kpiRows, 'tatSaved',           defaults.overviewKPIs.tatSaved),
   }
 
   // ── 3_OverviewTrend ─────────────────────────────────────
