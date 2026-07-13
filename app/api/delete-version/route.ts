@@ -42,10 +42,12 @@ export async function POST(request: NextRequest) {
       )
 
     if (sorted.length > 0) {
-      const latestRes = await fetch(sorted[0].url)
-      const latestPayload = await latestRes.json()
+      const { download } = await import('@vercel/blob')
+      const latestRes = await download(sorted[0].url)
+      const text = await latestRes.text()
+      const latestPayload = JSON.parse(text)
       await put('latest.json', JSON.stringify(latestPayload), {
-        access: 'public',
+        access: 'private',
         contentType: 'application/json',
         addRandomSuffix: false,
         allowOverwrite: true,

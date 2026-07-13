@@ -31,13 +31,13 @@ export async function POST(request: NextRequest) {
     const payload = JSON.stringify({ data, timestamp, label: displayLabel })
 
     await put(`versions/${timestamp}.json`, payload, {
-      access: 'public',
+      access: 'private',
       contentType: 'application/json',
       addRandomSuffix: false,
     })
 
     await put('latest.json', payload, {
-      access: 'public',
+      access: 'private',
       contentType: 'application/json',
       addRandomSuffix: false,
       allowOverwrite: true,
