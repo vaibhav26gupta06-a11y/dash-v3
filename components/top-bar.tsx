@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, Download, Upload, RefreshCw, CheckCircle } from 'lucide-react'
+import { Bell, Download, Upload, RefreshCw, CheckCircle, ChevronDown, Clock, AlertCircle, Lock } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useData } from '@/context/DataContext'
@@ -51,17 +51,66 @@ export function TopBar({
 }: TopBarProps) {
   const { toast } = useToast()
   const {
-    loadFromExcel, resetToDefault, isExcelLoaded,
-    isLoading: excelLoading, error: excelError,
-    lastUpdated, data: excelData,
+    loadFromExcel, isExcelLoaded, isLoading: excelLoading,
+    uploadError, versions, activeVersion,
+    loadVersion, loadLatest, data: excelData, deleteVersion,
   } = useData()
+
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [showVersions, setShowVersions] = useState(false)
+  const [password, setPassword] = useState('')
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [passwordError, setPasswordError] = useState('')
+
   const notifications = excelData?.notifications ?? []
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) loadFromExcel(file)
+    if (!file) return
+    setPendingFile(file)
+    setPassword('')
+    setPasswordError('')
+    setShowPasswordModal(true)
     e.target.value = ''
+  }
+
+  const handlePasswordSubmit = async () => {
+    if (!pendingFile || !password) return
+    setPasswordError('')
+    try {
+      await loadFromExcel(pendingFile, password)
+      setShowPasswordModal(false)
+      setPassword('')
+      setPendingFile(null)
+    } catch (err: any) {
+      setPasswordError(err.message || 'Incorrect password')
+    }
+  }
+
+  const handleVersionSelect = async (timestamp: string | null) => {
+    setShowVersions(false)
+    if (timestamp === null) {
+      await loadLatest()
+    } else {
+      await loadVersion(timestamp)
+    }
+  }
+
+  const handleDeleteVersion = async (
+    e: React.MouseEvent,
+    v: { timestamp: string; label: string }
+  ) => {
+    e.stopPropagation()
+    const pwd = window.prompt(
+      `Enter password to delete this upload:\n\n"${v.label}"`
+    )
+    if (!pwd) return
+    try {
+      await deleteVersion(v.timestamp, pwd)
+    } catch (err: any) {
+      window.alert(err.message || 'Delete failed')
+    }
   }
 
   const handleExport = () => {
@@ -221,53 +270,269 @@ export function TopBar({
           />
 
           {/* Divider */}
-          <div className="w-px h-6 bg-[color:var(--color-border)]" />
+          <div className="h-5 w-px bg-[color:var(--color-border)]" />
 
-          {/* Excel Upload Button */}
+          {/* Upload button */}
           {excelLoading ? (
-            <div className="flex items-center gap-2 text-xs text-[color:var(--color-text-muted)]">
-              <RefreshCw size={14} className="animate-spin" />
-              Parsing Excel...
+            <div className="flex items-center gap-2 text-xs
+                            text-[color:var(--color-text-muted)]">
+              <RefreshCw size={13} className="animate-spin" />
+              <span>Updating...</span>
             </div>
-          ) : isExcelLoaded ? (
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 text-xs text-[color:var(--color-green)] hover:bg-[color:var(--color-green-bg)] rounded px-3 py-1.5 transition-colors"
-              title={lastUpdated}
-            >
-              <CheckCircle size={14} />
-              Excel Loaded
-            </button>
           ) : (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 text-xs text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-grey-bg)] rounded px-3 py-1.5 transition-colors"
+              className="flex items-center gap-2 text-xs px-3 py-1.5
+                         rounded-lg border transition-colors bg-white
+                         border-[color:var(--color-border)]
+                         text-[color:var(--color-text-secondary)]
+                         hover:bg-[color:var(--color-grey-bg)]"
             >
-              <Upload size={14} />
+              <Upload size={13} />
               Upload Excel
             </button>
           )}
 
-          {/* Reset Button (only show if Excel is loaded) */}
-          {isExcelLoaded && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={resetToDefault}
-              className="text-xs border-[color:var(--color-border)] text-[color:var(--color-text-primary)] hover:bg-[color:var(--color-grey-bg)]"
-            >
-              Reset Data
-            </Button>
-          )}
+          {/* Version history dropdown — only shows after first upload */}
+          {versions.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowVersions(v => !v)}
+                className={`flex items-center gap-2 text-xs px-3 py-1.5
+                            rounded-lg border transition-colors ${
+                  activeVersion === null && isExcelLoaded
+                    ? 'bg-[color:var(--color-green-bg)] border-[color:var(--color-green)] text-[color:var(--color-green-text)]'
+                    : 'bg-[color:var(--color-blue-bg)] border-[color:var(--color-blue)] text-[color:var(--color-blue-text)]'
+                }`}
+              >
+                <CheckCircle size={13} />
+                <span className="max-w-[140px] truncate">
+                  {activeVersion === null
+                    ? 'Latest'
+                    : (versions.find(v => v.timestamp === activeVersion)?.label
+                       ?? 'Past version')}
+                </span>
+                <ChevronDown size={12} />
+              </button>
 
-          {/* Error display */}
-          {excelError && (
-            <div className="text-xs text-[color:var(--color-red)] bg-[color:var(--color-red-bg)] px-2 py-1 rounded">
-              {excelError}
+              {showVersions && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowVersions(false)}
+                  />
+                  <div className="absolute right-0 top-10 z-50 w-80
+                                  bg-white border border-[color:var(--color-border)]
+                                  rounded-xl shadow-xl overflow-hidden">
+
+                    <div className="px-4 py-3 border-b
+                                    border-[color:var(--color-border)]
+                                    bg-[color:var(--color-bg-section)]">
+                      <p className="text-xs font-semibold
+                                    text-[color:var(--color-text-secondary)]
+                                    uppercase tracking-wider">
+                        Upload History
+                      </p>
+                      <p className="text-xs text-[color:var(--color-text-muted)]
+                                    mt-0.5">
+                        {versions.length} version{versions.length !== 1 ? 's' : ''}
+                        saved · click any to view
+                      </p>
+                    </div>
+
+                    <div className="max-h-80 overflow-y-auto">
+                      {/* Latest shortcut */}
+                      <button
+                        onClick={() => handleVersionSelect(null)}
+                        className={`w-full text-left px-4 py-3 flex items-start
+                                    gap-3 hover:bg-[color:var(--color-grey-bg)]
+                                    transition-colors border-b
+                                    border-[color:var(--color-border)] ${
+                          activeVersion === null
+                            ? 'bg-[color:var(--color-green-bg)]'
+                            : ''
+                        }`}
+                      >
+                        <CheckCircle size={14}
+                          className="text-[color:var(--color-green)]
+                                     mt-0.5 flex-shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold
+                                        text-[color:var(--color-text-primary)]">
+                            Latest upload
+                          </p>
+                          <p className="text-xs text-[color:var(--color-text-muted)]
+                                        mt-0.5 truncate">
+                            {versions[0]?.label}
+                          </p>
+                        </div>
+                      </button>
+
+                      {/* All versions */}
+                      {versions.map((v, i) => (
+                        <button
+                          key={v.timestamp}
+                          onClick={() => handleVersionSelect(v.timestamp)}
+                          className={`group w-full text-left px-4 py-3 flex items-start
+                                      gap-3 hover:bg-[color:var(--color-grey-bg)]
+                                      transition-colors ${
+                            i < versions.length - 1
+                              ? 'border-b border-[color:var(--color-border)]'
+                              : ''
+                          } ${
+                            activeVersion === v.timestamp
+                              ? 'bg-[color:var(--color-blue-bg)]'
+                              : ''
+                          }`}
+                        >
+                          <Clock size={14}
+                            className="text-[color:var(--color-text-muted)]
+                                       mt-0.5 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium
+                                          text-[color:var(--color-text-primary)]
+                                          truncate">
+                              {v.label}
+                            </p>
+                            <p className="text-xs
+                                          text-[color:var(--color-text-muted)]
+                                          mt-0.5">
+                              {new Date(v.uploadedAt).toLocaleString('en-IN', {
+                                day: '2-digit', month: 'short', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit', hour12: true,
+                              })}
+                            </p>
+                          </div>
+                          <span
+                            onClick={(e) => handleDeleteVersion(e, v)}
+                            className="ml-auto flex-shrink-0 p-1.5 rounded-md
+                                       text-[color:var(--color-text-muted)]
+                                       hover:bg-red-50 hover:text-red-500
+                                       transition-colors opacity-0
+                                       group-hover:opacity-100"
+                            title="Delete this version"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" strokeWidth="2"
+                                 strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"/>
+                              <path d="M19 6l-1 14H6L5 6"/>
+                              <path d="M10 11v6M14 11v6"/>
+                              <path d="M9 6V4h6v2"/>
+                            </svg>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Password modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center
+                        justify-center bg-black/50"
+             onClick={e => {
+               if (e.target === e.currentTarget) {
+                 setShowPasswordModal(false)
+                 setPendingFile(null)
+               }
+             }}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-80 mx-4">
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-full bg-[#eff6ff]
+                              flex items-center justify-center flex-shrink-0">
+                <Lock size={16} className="text-[#1068AB]" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-[color:var(--color-text-primary)]">
+                  Upload password required
+                </h3>
+                <p className="text-xs text-[color:var(--color-text-muted)]
+                              mt-0.5 truncate max-w-[200px]">
+                  {pendingFile?.name}
+                </p>
+              </div>
+            </div>
+
+            <input
+              type="password"
+              placeholder="Enter password"
+              value={password}
+              onChange={e => {
+                setPassword(e.target.value)
+                setPasswordError('')
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handlePasswordSubmit()
+                if (e.key === 'Escape') {
+                  setShowPasswordModal(false)
+                  setPendingFile(null)
+                }
+              }}
+              autoFocus
+              className="w-full border border-[color:var(--color-border)]
+                         rounded-lg px-3 py-2.5 text-sm mb-2
+                         focus:outline-none focus:ring-2
+                         focus:ring-[#1068AB] focus:border-transparent"
+            />
+
+            {passwordError && (
+              <div className="flex items-center gap-2 text-xs
+                              text-[color:var(--color-red-text)] mb-2">
+                <AlertCircle size={12} />
+                {passwordError}
+              </div>
+            )}
+
+            {uploadError && !passwordError && (
+              <div className="flex items-center gap-2 text-xs
+                              text-[color:var(--color-red-text)] mb-2">
+                <AlertCircle size={12} />
+                {uploadError}
+              </div>
+            )}
+
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => {
+                  setShowPasswordModal(false)
+                  setPendingFile(null)
+                  setPassword('')
+                  setPasswordError('')
+                }}
+                className="flex-1 px-3 py-2.5 text-sm rounded-lg border
+                           border-[color:var(--color-border)]
+                           text-[color:var(--color-text-secondary)]
+                           hover:bg-[color:var(--color-grey-bg)]
+                           transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePasswordSubmit}
+                disabled={!password || excelLoading}
+                className="flex-1 px-3 py-2.5 text-sm rounded-lg font-medium
+                           bg-[#1068AB] text-white
+                           hover:bg-[#0d5a94] transition-colors
+                           disabled:opacity-50 disabled:cursor-not-allowed
+                           flex items-center justify-center gap-2"
+              >
+                {excelLoading
+                  ? <><RefreshCw size={13} className="animate-spin" />
+                      Uploading...</>
+                  : 'Upload'
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   )
 }
