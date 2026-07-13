@@ -15,10 +15,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ data: null, timestamp: null, label: null })
     }
 
-    const { download } = await import('@vercel/blob')
-    const response = await download(blob.url)
-    const text = await response.text()
-    const payload = JSON.parse(text)
+    const response = await fetch(blob.url)
+    const payload = await response.json()
 
     return NextResponse.json(payload)
 

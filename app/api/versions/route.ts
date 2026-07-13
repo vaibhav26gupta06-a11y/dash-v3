@@ -15,10 +15,8 @@ export async function GET() {
             .replace('versions/', '')
             .replace('.json', '')
           try {
-            const { download } = await import('@vercel/blob')
-            const res = await download(blob.url)
-            const text = await res.text()
-            const payload = JSON.parse(text)
+            const res = await fetch(blob.url)
+            const payload = await res.json()
             return {
               timestamp,
               label: payload.label || timestamp,
