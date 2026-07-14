@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 
 export function useCountUp(targetValue: number, duration: number = 800) {
-  const [displayValue, setDisplayValue] = useState(0)
-  const hasAnimated = useRef(false)
+  const [displayValue, setDisplayValue] = useState(targetValue)
+  const animationRef = useRef<number | null>(null)
+  const startValueRef = useRef(targetValue)
 
   useEffect(() => {
-    if (hasAnimated.current) return
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current)
+    }
 
-    hasAnimated.current = true
+    const startValue = startValueRef.current
     const startTime = Date.now()
-    const startValue = 0
 
     const animate = () => {
       const elapsed = Date.now() - startTime
@@ -20,11 +22,19 @@ export function useCountUp(targetValue: number, duration: number = 800) {
       setDisplayValue(Math.round(currentValue * 10) / 10)
 
       if (progress < 1) {
-        requestAnimationFrame(animate)
+        animationRef.current = requestAnimationFrame(animate)
+      } else {
+        startValueRef.current = targetValue
       }
     }
 
-    requestAnimationFrame(animate)
+    animationRef.current = requestAnimationFrame(animate)
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
   }, [targetValue, duration])
 
   return displayValue
